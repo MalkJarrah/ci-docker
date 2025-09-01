@@ -5,8 +5,6 @@ FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-
-
 # 3) Create work directory
 WORKDIR /app
 
@@ -15,9 +13,6 @@ COPY . .
 
 # 4) Install dependencies first (better caching)
 RUN pip install --no-cache-dir -r requirements.txt
-
-
-
 
 # 6) Expose port and run
 EXPOSE 5000
