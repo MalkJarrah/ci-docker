@@ -1,37 +1,73 @@
-Name the workflow
+name: CI - Test, Coverage, Docker Build & Run
 
-Give the workflow a title (e.g., “CI – Test, Coverage, Docker Build & Run”).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
-Define triggers
+jobs:
+  test:
+    name: Run Tests & Coverage
+    runs-on: ubuntu-latest
 
-Specify when the workflow runs (e.g., on every push or pull request).
 
-Set up a test job
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-Run on a GitHub-hosted machine (Ubuntu).
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-Checkout the repository code.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
 
-Set up Python.
+      - name: Run tests with coverage
+        run: pytest --cov=app
 
-Install dependencies from requirements.txt.
+      - name: Upload coverage report (optional)
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: ./coverage.xml
 
-Run tests with coverage.
+  docker:
+    name: Build & Test Docker Container
+    runs-on: ubuntu-latest
+    needs: test  
 
-Save/upload the coverage report.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-Set up a Docker job (runs only if tests pass)
+      - name: Build Docker image
+        run: docker build -t flask-ci-docker .
 
-Checkout the repository code.
+      - name: Run Docker container in background
+        run: docker run -d -p 5000:5000 --name flask-ci-docker-container flask-ci-docker
 
-Build the Docker image using the Dockerfile.
+      - name: Wait for container to be ready
+        run: |
+          for i in {1..10}; do
+            if curl -s http://localhost:5000; then
+              echo "Container is ready"
+              break
+            fi
+            echo "Waiting for container..."
+            sleep 3
+          done
 
-Run the container in the background.
+      - name: Verify container response
+        run: curl -v http://localhost:5000
 
-Wait until the container is ready to accept requests.
+      - name: Show container logs 
+        run: docker logs flask-ci-docker-container
 
-Verify the container by making an HTTP request to the app.
+      - name: Stop and remove container
+        run: docker rm -f flask-ci-docker-container
 
-Show logs for debugging.
-
-Stop and remove the container after verification.
